@@ -1,16 +1,8 @@
-"""
-模型训练,使用AdamOptimizer来做梯度最速下降,自适应的调整学习率
-train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
-test accuracy 0.9831
 
-.meta(存储网络结构)、.data和.index(存储训练好的参数)、checkpoint(记录最新的模型)。
-保存网络参数到matlab
-"""
 
 import tensorflow as tf
 import os
 from tensorflow.examples.tutorials.mnist import input_data#导入数据集
-import scipy.io as scio
 
 
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
@@ -76,33 +68,32 @@ y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
 """交叉熵损失"""
 cross_entropy = -tf.reduce_sum(y_ * tf.log(y_conv))
+#cross_entropy = cross_entropy + tf.add_n(tf.get_collection('losses'))
 # 模型训练,使用AdamOptimizer来做梯度最速下降,自适应的调整学习率
-train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 # 正确预测,得到True或False的List
 correct_prediction = tf.equal(tf.argmax(y_, 1), tf.argmax(y_conv, 1))
 # 将布尔值转化成浮点数，取平均值作为精确度
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
 BATCH_SIZE = 50
+#MODEL_SAVE_PATH = 'model'
+#MODEL_NAME = 'mnist_model'
 saver = tf.train.Saver()
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    saver = tf.train.Saver()
     for i in range(2000):
         # 每次取50个样本进行训练
         batch = mnist.train.next_batch(BATCH_SIZE)
 
         if i%100 == 0:
 
-            train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1],keep_prob: 1.0})
+            train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1],keep_prob: 1.0})  # 模型中间不使用dropout
             print("step %d, training accuracy %g" % (i, train_accuracy))
-
-
-        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+            #saver.save(sess,os.path.join(MODEL_SAVE_PATH,MODEL_NAME),global_step=global_step)#保存模型
+        train_step.run(feed_dict={x:batch[0], y_:batch[1], keep_prob: 0.5})
     print("test accuracy %g" % accuracy.eval(feed_dict={
                 x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
-    saver.save(sess, os.path.join('model', 'my_model'), global_step=i)  # 保存模型
-
 
 
 
